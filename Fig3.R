@@ -8,7 +8,7 @@ library(dplyr)
 library(patchwork)
 library(tidyr)
 
-#### FIG. 3A - 3C (HEXDENSITY-SCATTERPLOTS) ####
+#### FIG. 3A - 3C ####
 source("Fig3.Source")
 
 {# Load data
@@ -47,7 +47,7 @@ source("Fig3.Source")
   sdf$sfc <- log10((sdf$short + 1) / (sdf$bulk + 1))
   sdf$lfc <- log10((sdf$long + 1) / (sdf$bulk + 1))
   
-  # Add columns for chromosome and gene length
+  # Add metadata
   gtf <- import("genes.gtf")
   
   # GENE LEVEL INFORMATION
@@ -122,6 +122,7 @@ source("Fig3.Source")
   sdf.p2 <- sdf[sqrt(sdf$sfc^2 + sdf$fc^2) > radius, ]
   sdf.p3 <- sdf[sqrt(sdf$lfc^2 + sdf$sfc^2) > radius, ]
   
+  # Metrics
   genes_plotted_unique <- bind_rows(
     sdf.p1 %>% dplyr::select(gname),
     sdf.p2 %>% dplyr::select(gname),
@@ -130,8 +131,7 @@ source("Fig3.Source")
     distinct(gname)
   
   n_genes_plotted_unique <- nrow(genes_plotted_unique)
-  
-  # Genes removed by the circle in ALL panels
+
   genes_removed_unique <- sdf %>%
     filter(
       sqrt(lfc^2 + fc^2) <= radius &
@@ -147,7 +147,7 @@ source("Fig3.Source")
   cat("Unique genes removed:", n_genes_removed_unique, "\n")
 }
 
-# Fig. 3A (gene density)
+# Plot Fig. 3A 
 p1 <- ggplot(sdf.p1, aes(y = fc, x = lfc, label = gname)) +
   geom_point() +
   geom_hex(bins = 100) +
@@ -213,7 +213,7 @@ p3 <- ggplot(sdf.p3, aes(y=lfc, x=sfc, label = gname)) +
 ggMarginal(p3, yparams = list(fill = "#5C1A8A", color = "black"),
            xparams = list(fill = "#D5722A", color = "black")) # Customize x-axis histogram
 
-# Fig. 3B (log(mean intron length))
+# Plot Fig. 3B (log(mean intron length))
 red_genes <- c("PTPRD", "RBFOX1")
 col_red  <- "black"  
 
@@ -306,7 +306,7 @@ p3 <- ggplot(sdf.p3, aes(y=lfc, x=sfc)) +
 
 p3
 
-# Fig. 3B (log(gene length))
+# Plot Fig. 3B (log(gene length))
 red_genes <- c("PTPRD", "RBFOX1")
 col_red  <- "black"   # same red as before
 
@@ -401,7 +401,7 @@ p3
 
 
 
-#### FIG. 3E (LR UMAP) ####
+#### FIG. 3E ####
 # Load data
 sr.pbmc <- readRDS("SR.PBMC.S3.rds")
 lr.pbmc <- readRDS("LR.PBMC.S3.rds")
@@ -420,7 +420,7 @@ sr.pbmc$celltype.grouped[sr.pbmc$celltype.grouped %in% c("dnT", "ILC")] <- NA
 sr.cell.types <- sr.pbmc@meta.data[rownames(lr.pbmc@meta.data), "celltype.grouped", drop = FALSE]
 lr.pbmc@meta.data[["celltype.grouped"]] <- sr.cell.types$celltype.grouped
 
-# Create LR gene UMAP
+# Plot
 lr.gene.umap <- DimPlot(lr.pbmc, reduction = "ref.umap", group.by = "celltype.grouped", label = F, repel = T, label.size = 5.5, pt.size = 1.5) + 
   NoLegend() + 
   xlab("UMAP_1") +
@@ -431,7 +431,7 @@ lr.gene.umap
 
 
 
-#### FIG. 3F (LR GENE HEATMAP) #####
+#### FIG. 3F #####
 # Load data
 lr.pbmc <- readRDS("LR.PBMC.S3.rds")
 
@@ -458,30 +458,21 @@ gene.markers.filtered <- gene.markers %>%
   mutate(spec.score = avg_log2FC * (pct.1 - pct.2)) %>%
   dplyr::filter(avg_log2FC > 0.4, pct.1 > 0.25, pct.2 < 0.15)
 
-# Initialize empty DF to store top 3 unique genes per cluster
+# Top 3 unique genes per cell type
 top3.unique <- data.frame()
-
-# Keep track of transcripts already selected
 used.genes <- c()
 
-# Loop over clusters
+# Loop
 for (clust in unique(gene.markers.filtered$cluster)) {
   
-  # Get markers for this cluster, ordered by spec.score
   df <- gene.markers.filtered %>%
     dplyr::filter(cluster == clust) %>%
     arrange(desc(spec.score))
   
-  # Keep only transcripts not already used
   df <- df[!df$gene %in% used.genes, ]
-  
-  # Use top 3 transcripts
   top_n <- head(df, 3)
-  
-  # Append to results
   top3.unique <- rbind(top3.unique, top_n)
   
-  # Add selected transcripts to used list
   used.genes <- c(used.genes, top_n$gene)
 }
 
@@ -489,7 +480,7 @@ for (clust in unique(gene.markers.filtered$cluster)) {
 genes.to.plot <- top3.unique$gene
 lr.pbmc <- ScaleData(lr.pbmc, features = genes.to.plot, assay = "RNA")
 
-# Visualize (dotplot)
+# Plot
 DotPlot(lr.pbmc, features = genes.to.plot, assay = "RNA", dot.scale = 10) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 14), 
         plot.margin = unit(c(1, 1, 1, 2), "cm"),

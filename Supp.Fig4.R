@@ -1,4 +1,4 @@
-# Supplementary Figure 4 (see "Supp.Fig3.R" for supplementary figure 4B)
+# Supplementary Figure 4
 
 # Load packages
 rm(list = ls())
@@ -13,79 +13,110 @@ library(reshape2)
 library(dplyr)
 library(tidyr)
 
-#### FIG. 4A (TRANSCRIPT-LEVEL UMAP) ####
-# Load data
-sr.pbmc <- readRDS("SR.PBMC.S3.rds")
-lr.pbmc <- readRDS("LR.PBMC.S3.rds")
+#### SUPP FIG. 4A ####
+source("source.R")
 
-# Create a new metadata column to store filtered celltypes
-sr.pbmc$celltype.filtered <- dplyr::case_when(
+{
+  ## LOAD SR DATA
+  sr.pip <- GetObject("sr.pbmc.sens3")
+  sr.tenx <- GetObject("sr.pbmc.10x")
+  sr <- Getcpm(sr.tenx)
+  # sr.alevin <- GetObject("sr.pbmc.alevin")
+  # sr <- Getcpm(sr.alevin)
   
-  # Monocytes
-  sr.pbmc$predicted.celltype.l2 %in% c("CD14 Mono") ~ "CD14 Mono",
-  sr.pbmc$predicted.celltype.l2 %in% c("CD16 Mono") ~ "CD16 Mono",
+  ## LOAD LR DATA
+  lr.masiso <- GetObject("lr.pbmc.masiso")
+  lr <- GetObject("lr.pbmc.95")
+  lr <- subset(lr, cells = Cells(sr.pip))
+  lr <- NormalizeData(lr, normalization.method = "LogNormalize")
+  lr <- Gettpm(lr, kind = "lr")
   
-  # DC (combine ASDC, cDC1, cDC2)
-  sr.pbmc$predicted.celltype.l2 %in% c("ASDC", "cDC1", "cDC2") ~ "DC",
-  
-  # Plasmablast
-  sr.pbmc$predicted.celltype.l2 %in% c("Plasmablast") ~ "Plasmablast",
-  
-  # B cells (combine naive, memory, intermediate)
-  sr.pbmc$predicted.celltype.l2 %in% c("B naive", "B memory", "B intermediate") ~ "B Cells",
-  
-  # HSPC
-  sr.pbmc$predicted.celltype.l2 %in% c("HSPC") ~ "HSPC",
-  
-  # Erythroid
-  sr.pbmc$predicted.celltype.l2 %in% c("Eryth") ~ "Erythroid",
-  
-  # Platelet
-  sr.pbmc$predicted.celltype.l2 %in% c("Platelet") ~ "Platelet",
-  
-  # pDC
-  sr.pbmc$predicted.celltype.l2 %in% c("pDC") ~ "pDC",
-  
-  # CD4 T cells (combine naive, TCM, TEM, CTL)
-  sr.pbmc$predicted.celltype.l2 %in% c("CD4 Naive", "CD4 TCM", "CD4 TEM", "CD4 CTL") ~ "CD4 T Cells",
-  
-  # Treg
-  sr.pbmc$predicted.celltype.l2 %in% c("Treg") ~ "Treg",
-  
-  # CD8 T cells (combine naive, TCM, TEM)
-  sr.pbmc$predicted.celltype.l2 %in% c("CD8 Naive", "CD8 TCM", "CD8 TEM") ~ "CD8 T Cells",
-  
-  # MAIT
-  sr.pbmc$predicted.celltype.l2 %in% c("MAIT") ~ "MAIT",
-  
-  # CD4 proliferating
-  sr.pbmc$predicted.celltype.l2 %in% c("CD4 Proliferating") ~ "CD4 Proliferating",
-  
-  # Everything else → ignored (NA)
-  TRUE ~ NA_character_
-)
+  ## LOAD BULK DATA
+  bulk <- GetObject("bulk.pbmc")
+  bulk <- Gettpm(bulk, kind = "bulk")
+}
 
-# Add filtered celltypes to LR object
-sr.cell.types <- sr.pbmc@meta.data[rownames(lr.pbmc@meta.data), "celltype.filtered", drop = FALSE]
-lr.pbmc@meta.data[["celltype.filtered"]] <- sr.cell.types$celltype.filtered
+{ ## GENE-LEVEL ANALYSES
+  keep.genes <- intersect(
+    intersect(names(lr$cpm), 
+              names(sr)), 
+    names(bulk$cpm))
+  length(keep.genes)
+  
+  df <- data.frame(
+    "long" = lr$cpm[keep.genes],
+    "short" = sr[keep.genes],
+    "bulk" = bulk$cpm[keep.genes]
+  )
+  cor(df, method = "spearman")
+  df <- FillGeneMetadata(df)
+  
+  df$fc <- log((df$short + 1) / (df$long + 1))
+  df <- df[order(df$fc),]
+  
+  sdf <- df#[df$type == "protein_coding",]
+  sdf$gname <- rownames(sdf)
+  sdf$sfc <- log10((sdf$short + 1) / (sdf$bulk + 1))
+  sdf$lfc <- log10((sdf$long + 1) / (sdf$bulk + 1))
+  
+  # Remove duplicate rows
+  sdf <- sdf[!duplicated(sdf), ]
+}
 
-# Filter cells (remove NA)
-umap.cells <- WhichCells(lr.pbmc, expression = !is.na(celltype.filtered))
-
-# Create LR transcript UMAP
-lr.transcript.umap <- DimPlot(lr.pbmc, 
-                              reduction = "transcript.umap", 
-                              group.by = "celltype.filtered", 
-                              cells = umap.cells,
-                              label = F, 
-                              repel = T, 
-                              label.size = 5.5, 
-                              pt.size = 0.75) + 
-  NoLegend() + 
-  xlab("UMAP_1") +
-  ylab("UMAP_2") + 
-  theme(plot.title = element_blank())
-lr.transcript.umap <- LabelClusters(lr.transcript.umap, id = "celltype.filtered", fontface = "bold", size = 5.5, repel = TRUE, color = "black")
-
-# Visualize
-lr.transcript.umap
+{  # txp level analyses
+  lr.masiso <- GetObject("lr.pbmc.masiso")
+  
+  keep.txps <- intersect(names(lr$tpm), names(bulk$tpm))
+  keep.txps <- intersect(keep.txps, names(lr.masiso$txp))
+  length(keep.txps)
+  
+  tdf <- data.frame(
+    "masiso" = 0,
+    "long" = lr$tpm[keep.txps],
+    "bulk" = bulk$tpm[keep.txps]
+  )
+  dim(tdf)
+  
+  keep.txps.masiso <- intersect(keep.txps, names(lr.masiso$txp))
+  tdf[keep.txps.masiso, "masiso"] <- lr.masiso$txp[keep.txps.masiso]
+  tdf$masiso <- tdf$masiso*1000000/sum(tdf$masiso)
+  cor(tdf, method = "spearman") #0.555239
+  
+  tdf <- FillTxpMetadata(tdf)
+  head(tdf)
+  
+  cor(tdf[tdf$type == "protein_coding",c(1,2)], 
+      method = "spearman") #0.517608
+  
+  # tdf$fc <- log((tdf$bulk + 0.1) / (tdf$long + 0.1))
+  
+  # tdf$lfc <- log((tdf$long + 0.1) / (tdf$bulk + 0.1))
+  # tdf$mfc <- log((tdf$masiso + 0.1) / (tdf$bulk + 0.1))
+  
+  # tdf <- tdf[order(tdf$fc),]
+  tail(tdf, 20)
+  
+  {
+    sdf <- tdf#[tdf$type == "protein_coding",]
+    sdf$mfc <- log10((sdf$masiso + 1) / (sdf$bulk + 1))
+    sdf$lfc <- log10((sdf$long + 1) / (sdf$bulk + 1))
+    
+    radius <- 0.25 
+    sdf.p1 <- sdf[sqrt(sdf$lfc^2 + sdf$mfc^2) > radius, ]
+    
+    n_txps_total   <- nrow(sdf)
+    n_txps_plotted <- nrow(sdf.p1)
+    n_txps_removed <- n_txps_total - n_txps_plotted
+    
+    cat("UNIQUE transcripts plotted:", n_txps_plotted, "\n")
+    cat("UNIQUE transcripts removed by circle:", n_txps_removed, "\n")
+    
+    p4 <- ggplot(sdf.p1, aes(y=lfc, x=mfc)) +
+      geom_point() +
+      geom_hex(bins = 100) +
+      scale_fill_viridis_c(option = "plasma", trans = "log10") +
+      theme_minimal()
+    ggMarginal(p4, yparams = list(fill = "#5C1A8A", color = "black"),
+               xparams = list(fill = "#D5722A", color = "black")) # Customize x-axis histogram
+  }
+}

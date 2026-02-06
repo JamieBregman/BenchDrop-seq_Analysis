@@ -1,4 +1,4 @@
-# Supplementary Figure 2
+# Supp Figure 2
 
 # Load packages
 library(Seurat)
@@ -7,7 +7,7 @@ library(ggplot2)
 library(viridis)
 library(dplyr)
 
-#### SUPPLEMENTARY FIG. 2B (SINGLE-CELL METRICS) ####
+#### SUPP FIG. 2B ####
 # Load data
 lr.pbmc <- readRDS("LR.PBMC.S3.rds")
 
@@ -21,7 +21,7 @@ tx.meta <- lr.pbmc@meta.data %>%
     sample
   )
 
-# Visualize number of UMIs per cell
+# Number of UMIs per cell
 umis.per.cell <- ggplot(
   tx.meta,
   aes(x = sample, y = nCount_RNA, fill = sample)
@@ -42,7 +42,7 @@ umis.per.cell <- ggplot(
     axis.text = element_text(size = 20)
   )
 
-# Visualize number of genes per cell
+# Number of genes per cell
 genes.per.cell <- ggplot(
   tx.meta,
   aes(x = sample, y = nFeature_RNA, fill = sample)
@@ -63,7 +63,7 @@ genes.per.cell <- ggplot(
     axis.text = element_text(size = 20)
   )
 
-# Visualize number of transcripts per cell
+# Number of transcripts per cell
 txs.per.cell <- ggplot(
   tx.meta,
   aes(x = sample, y = nFeature_transcript, fill = sample)
@@ -84,12 +84,12 @@ txs.per.cell <- ggplot(
     axis.text = element_text(size = 20)
   )
 
-# Visualize together
+# Plot
 umis.per.cell + genes.per.cell + txs.per.cell
 
 
 
-#### SUPPLEMENTARY FIG. 2C (SHORT VS BULK CORRELATION) ####
+#### SUPP FIG. 2C ####
 # Load data
 sr.pbmc <- readRDS("SR.PBMC.S3.rds")
 
@@ -100,7 +100,7 @@ bulk.tx.quants <- read.table("quant.sf", header = TRUE, sep = "\t", stringsAsFac
 bulk.tx.quants <- bulk.tx.quants %>% dplyr::select(transcript.id = Name, TPM)
 bulk.tx.quants <- setNames(bulk.tx.quants$TPM, bulk.tx.quants$transcript.id)
 
-# Read in transcript to gene mapping
+# Transcript to gene mapping
 t2g <- read.delim("t2gnames.txt", header = FALSE, stringsAsFactors = FALSE)
 colnames(t2g) <- c("transcript.id", "gene.name")
 
@@ -117,7 +117,7 @@ sr.gene.mat <- GetAssayData(sr.pbmc, assay = "RNA", layer = "data")
 sr.gene.rowsums <- rowSums(sr.gene.mat)
 sr.gene.bulk <- sr.gene.rowsums*1e6 / sum(sr.gene.rowsums)
 
-# Subset for ALL genes
+# Union
 all.genes <- union(names(sr.gene.bulk), names(bulk.gene.quants))
 sr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
 bulk.gene.quants.full <- setNames(numeric(length(all.genes)), all.genes)
@@ -130,10 +130,10 @@ bulk.gene.quants <- bulk.gene.quants.full
 pearson.cor <- cor(sr.gene.bulk, bulk.gene.quants, method = "pearson")
 spearman.cor <- cor(sr.gene.bulk, bulk.gene.quants, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(Short = log1p(sr.gene.bulk), Bulk = log1p(bulk.gene.quants))
 
-# Plot with hex density
+# Plot
 p <- ggplot(df.cor, aes(x = Bulk, y = Short)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 
@@ -152,7 +152,7 @@ p + annotate("text",
 
 
 
-#### SUPPLEMENTARY FIG. 2D (LONG VS BULK CORRELATION) ####
+#### SUPP FIG. 2D ####
 # Load data
 lr.pbmc <- readRDS("LR.PBMC.S3.rds")
 
@@ -180,7 +180,7 @@ lr.gene.mat <- GetAssayData(lr.pbmc, assay = "RNA", layer = "data")
 lr.gene.rowsums <- rowSums(lr.gene.mat)
 lr.gene.bulk <- lr.gene.rowsums*1e6 / sum(lr.gene.rowsums)
 
-# Subset for ALL genes
+# Union
 all.genes <- union(names(lr.gene.bulk), names(bulk.gene.quants))
 lr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
 bulk.gene.quants.full <- setNames(numeric(length(all.genes)), all.genes)
@@ -193,10 +193,10 @@ bulk.gene.quants <- bulk.gene.quants.full
 pearson.cor <- cor(lr.gene.bulk, bulk.gene.quants, method = "pearson")
 spearman.cor <- cor(lr.gene.bulk, bulk.gene.quants, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(`BenchDrop-seq` = log1p(lr.gene.bulk), Bulk = log1p(bulk.gene.quants), check.names = FALSE)
 
-# Plot with hex density
+# Plot
 p <- ggplot(df.cor, aes(x = Bulk, y = `BenchDrop-seq`)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 
@@ -215,7 +215,7 @@ p + annotate("text",
 
 
 
-#### SUPPLEMENTARY FIG. 2E (SHORT VS LONG CORRELATION) ####
+#### SUPP FIG. 2E ####
 # Load data
 sr.pbmc <- readRDS("SR.PBMC.S3.rds")
 lr.pbmc <- readRDS("LR.PBMC.S3.rds")
@@ -230,7 +230,7 @@ lr.gene.mat <- GetAssayData(lr.pbmc, assay = "RNA", layer = "data")
 sr.gene.bulk <- rowSums(sr.gene.mat) 
 lr.gene.bulk <- rowSums(lr.gene.mat)
 
-# Subset for ALL genes
+# Union
 all.genes <- union(names(sr.gene.bulk), names(lr.gene.bulk))
 sr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
 lr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
@@ -243,10 +243,10 @@ lr.gene.bulk <- lr.gene.bulk.full
 pearson.cor <- cor(sr.gene.bulk, lr.gene.bulk, method = "pearson")
 spearman.cor <- cor(sr.gene.bulk, lr.gene.bulk, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(Short = log1p(sr.gene.bulk), `BenchDrop-seq` = log1p(lr.gene.bulk), check.names = FALSE)
 
-# Plot with hex density
+# Plot
 p <- ggplot(df.cor, aes(x = Short, y = `BenchDrop-seq`)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 

@@ -11,7 +11,7 @@ library(pbapply)
 library(reshape2)
 library(viridis)
 
-#### FIG. 2B (SINGLE-CELL METRICS) ####
+#### FIG. 2B ####
 # Load Seurat objects
 sr.k562 <- readRDS("SR.K562.S3.rds")
 lr.k562 <- readRDS("LR.K562.S3.rds")
@@ -24,7 +24,7 @@ metadata <- bind_rows(
   lr.k562@meta.data %>% dplyr::select(nCount_RNA, nFeature_RNA, sample),
 )
 
-# Visualize number of UMIs per cell
+# Number of UMIs per cell
 umis.cell <- ggplot(metadata, aes(x = sample, y = nCount_RNA, fill = sample)) +
   geom_violin(scale = "width", trim = TRUE) +
   scale_y_log10() +
@@ -34,7 +34,7 @@ umis.cell <- ggplot(metadata, aes(x = sample, y = nCount_RNA, fill = sample)) +
   theme(legend.position = "none", 
         panel.grid = element_blank())
 
-# Visualize number of genes per cell
+# Numer of genes per cell
 genes.cell <- ggplot(metadata, aes(x = sample, y = nFeature_RNA, fill = sample)) +
   geom_violin(scale = "width", trim = TRUE) +
   scale_y_log10() +
@@ -44,32 +44,29 @@ genes.cell <- ggplot(metadata, aes(x = sample, y = nFeature_RNA, fill = sample))
   theme(legend.position = "none", 
         panel.grid = element_blank())
 
-# Plot together
+# Plot
 umis.cell + genes.cell
 
 
 
-#### FIG. 2C (EQUIVALENCE CLASS LENGTH) ####
+#### FIG. 2C ####
 # Load length data
 lf <- read.table("lr.lens.txt")
-sf <- read.table("sr.lens.txt")
-
-# Store data as DataFrame
 lf <- data.frame(table(lf$V1))
-sf <- data.frame(table(sf$V1))
-
-# Add platform label
 lf$kind <- "BenchDrop-seq"
+
+sf <- read.table("sr.lens.txt")
+sf <- data.frame(table(sf$V1))
 sf$kind <- "Short"
 
 # Compute percent
 lf$percent <- lf$Freq * 100.0 / sum(lf$Freq)
 sf$percent <- sf$Freq * 100.0 / sum(sf$Freq)
 
-# Combine DF for plotting
+# DF for plotting
 df <- rbind(lf, sf)
 
-# Visualize
+# Plot
 ggplot(df, aes(x = factor(kind), y = Var1, group = factor(kind), color = kind, size = percent)) +
   geom_point() +
   theme_classic() +
@@ -85,7 +82,7 @@ ggplot(df, aes(x = factor(kind), y = Var1, group = factor(kind), color = kind, s
 
 
 
-#### FIG. 2E (SR vs BULK CORRELATION) #####
+#### FIG. 2E #####
 # Load data
 sr.k562 <- readRDS("SR.K562.S3.rds")
 lr.k562 <- readRDS("LR.K562.S3.rds")
@@ -97,7 +94,7 @@ bulk.tx.quants <- read.table("k562.pe.bulk.quant.sf", header = TRUE, sep = "\t",
 bulk.tx.quants <- bulk.tx.quants %>% dplyr::select(transcript.id = Name, TPM)
 bulk.tx.quants <- setNames(bulk.tx.quants$TPM, bulk.tx.quants$transcript.id)
 
-# Read in transcript to gene mapping
+# Transcript to gene mapping
 t2g <- read.delim("t2gnames.txt", header = FALSE, stringsAsFactors = FALSE)
 colnames(t2g) <- c("transcript.id", "gene.name")
 
@@ -107,14 +104,12 @@ t2g.sub <- t2g[t2g$transcript.id %in% names(bulk.tx.quants), ]
 # Aggregate bulk transcript TPM counts to bulk gene TPM counts
 bulk.gene.quants <- tapply(bulk.tx.quants[t2g.sub$transcript.id], t2g.sub$gene.name, sum)
 
-# Access SR gene matrix
+# Pseudobulk SR gene counts 
 sr.gene.mat <- GetAssayData(sr.k562, assay = "RNA", layer = "data")
-
-# Compute pseudobulk gene counts 
 sr.gene.rowsums <- rowSums(sr.gene.mat)
 sr.gene.bulk <- sr.gene.rowsums*1e6 / sum(sr.gene.rowsums)
 
-# Initialize vectors with all transcript names
+# Union
 all.genes <- union(names(sr.gene.bulk), names(bulk.gene.quants))
 sr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
 bulk.gene.quants.full <- setNames(numeric(length(all.genes)), all.genes)
@@ -127,10 +122,10 @@ bulk.gene.quants <- bulk.gene.quants.full
 pearson.cor <- cor(sr.gene.bulk, bulk.gene.quants, method = "pearson")
 spearman.cor <- cor(sr.gene.bulk, bulk.gene.quants, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(Short = log1p(sr.gene.bulk), Bulk = log1p(bulk.gene.quants))
 
-# Plot with hex density
+# Plot
 p <- ggplot(df.cor, aes(x = Bulk, y = Short)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 
@@ -150,7 +145,7 @@ p + annotate("text",
 
 
 
-#### FIG. 2F (LR vs BULK CORRELATION) #####
+#### FIG. 2F #####
 # Load data
 sr.k562 <- readRDS("SR.K562.S3.rds")
 lr.k562 <- readRDS("LR.K562.S3.rds")
@@ -162,7 +157,7 @@ bulk.tx.quants <- read.table("k562.pe.bulk.quant.sf", header = TRUE, sep = "\t",
 bulk.tx.quants <- bulk.tx.quants %>% dplyr::select(transcript.id = Name, TPM)
 bulk.tx.quants <- setNames(bulk.tx.quants$TPM, bulk.tx.quants$transcript.id)
 
-# Read in transcript to gene mapping
+# Transcript to gene mapping
 t2g <- read.delim("t2gnames.txt", header = FALSE, stringsAsFactors = FALSE)
 colnames(t2g) <- c("transcript.id", "gene.name")
 
@@ -172,23 +167,17 @@ t2g.sub <- t2g[t2g$transcript.id %in% names(bulk.tx.quants), ]
 # Aggregate bulk transcript TPM counts to bulk gene TPM counts
 bulk.gene.quants <- tapply(bulk.tx.quants[t2g.sub$transcript.id], t2g.sub$gene.name, sum)
 
-# Access LR gene matrix
+# Pseudobulk LR gene matrix
 lr.gene.mat <- GetAssayData(lr.k562, assay = "RNA", layer = "data")
-
-# Compute pseudobulk gene counts 
 lr.gene.rowsums <- rowSums(lr.gene.mat)
 lr.gene.bulk <- lr.gene.rowsums*1e6 / sum(lr.gene.rowsums)
 
-# Initialize vectors with all transcript names
+# Union
 all.genes <- union(names(lr.gene.bulk), names(bulk.gene.quants))
 lr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
 bulk.gene.quants.full <- setNames(numeric(length(all.genes)), all.genes)
-
-# Fill values where present
 lr.gene.bulk.full[names(lr.gene.bulk)] <- lr.gene.bulk
 bulk.gene.quants.full[names(bulk.gene.quants)] <- bulk.gene.quants
-
-# Replace originals
 lr.gene.bulk <- lr.gene.bulk.full
 bulk.gene.quants <- bulk.gene.quants.full
 
@@ -196,10 +185,10 @@ bulk.gene.quants <- bulk.gene.quants.full
 pearson.cor <- cor(lr.gene.bulk, bulk.gene.quants, method = "pearson")
 spearman.cor <- cor(lr.gene.bulk, bulk.gene.quants, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(`BenchDrop-seq` = log1p(lr.gene.bulk), Bulk = log1p(bulk.gene.quants), check.names = FALSE)
 
-# Plot with hex density
+# Plot 
 p <- ggplot(df.cor, aes(x = Bulk, y = `BenchDrop-seq`)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 
@@ -219,7 +208,7 @@ p + annotate("text",
 
 
 
-##### FIG. 2G (SR vs LR CORRELATION) #####
+##### FIG. 2G #####
 # Load data
 sr.k562 <- readRDS("SR.K562.S3.rds")
 lr.k562 <- readRDS("LR.K562.S3.rds")
@@ -234,7 +223,7 @@ lr.gene.mat <- GetAssayData(lr.k562, assay = "RNA", layer = "data")
 sr.gene.bulk <- rowSums(sr.gene.mat) 
 lr.gene.bulk <- rowSums(lr.gene.mat)
 
-# Initialize vectors with all transcript names
+# Union
 all.genes <- union(names(sr.gene.bulk), names(lr.gene.bulk))
 sr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
 lr.gene.bulk.full <- setNames(numeric(length(all.genes)), all.genes)
@@ -247,10 +236,10 @@ lr.gene.bulk <- lr.gene.bulk.full
 pearson.cor <- cor(sr.gene.bulk, lr.gene.bulk, method = "pearson")
 spearman.cor <- cor(sr.gene.bulk, lr.gene.bulk, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(Short = log1p(sr.gene.bulk), `BenchDrop-seq` = log1p(lr.gene.bulk), check.names = FALSE)
 
-# Plot with hex density
+# Plot
 p <- ggplot(df.cor, aes(x = Short, y = `BenchDrop-seq`)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 
@@ -269,11 +258,11 @@ p + annotate("text",
 
 
 
-#### FIG. 2H (DOWNSAMPLING) ####
+#### FIG. 2H ####
 # Load SR data
 sfmat <- Read10X("sensitivity_3")
 
-# Read in transcript to gene mapping
+# Transcript to gene mapping
 fread <- read.table("t2gnames.txt", header = FALSE, stringsAsFactors = FALSE)
 t2g <- as.vector(fread$V2)
 names(t2g) <- as.vector(fread$V1)
@@ -303,7 +292,7 @@ sub.mats <- lapply(fpaths, function(x) {
   GetMat(x, colnames(sfmat))
 })
 
-# Access all transcripts and format into a list and remove duplicates
+# Access all transcripts and format into a list
 all.txps <- unlist(lapply(sub.mats, function(x) rownames(x)))
 all.txps <- all.txps[!duplicated(all.txps)]
 

@@ -1,4 +1,4 @@
-# Supplementary Figure 1
+# Supp Figure 1
 
 # Load packages
 library(Seurat)
@@ -6,14 +6,12 @@ library(Matrix)
 library(ggplot2)
 library(viridis)
 
-#### SUPPLEMENTARY FIG.1D (LR VS SALMON-ALEVIN CORRELATION) ####
+#### SUPP FIG.1D ####
 # Load LR data
 lr.k562 <- readRDS("LR.K562.S3.rds")
-
-# Access matrix
 lr.mat <- GetAssayData(lr.k562, assay = "RNA", layer = "data")
 
-# Load alevin quantifications
+# Load Alevin quants
 alevin.mat <- readMM("quants_mat.mtx")
 alevin.mat <- t(alevin.mat)
 alevin.feats <- read.table("/quants_mat_cols.txt")$V1
@@ -21,7 +19,7 @@ rownames(alevin.mat) <- alevin.feats
 alevin.bcs <- read.table("quants_mat_rows.txt")$V1
 colnames(alevin.mat) <- alevin.bcs
 
-# Subset alevin quantifications for the same cells as BenchDrop-seq
+# Subset Alevin quants for the same cells as BenchDrop-seq
 common.cols <- intersect(colnames(lr.mat), colnames(alevin.mat))
 alevin.mat <- alevin.mat[, common.cols, drop = FALSE]
 
@@ -42,10 +40,10 @@ alevin.bulk <- alevin.bulk.full
 pearson.cor <- cor(lr.mat.bulk, alevin.bulk, method = "pearson")
 spearman.cor <- cor(lr.mat.bulk, alevin.bulk, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(`BenchDrop-seq` = log1p(lr.mat.bulk), `Salmon-Alevin` = log1p(alevin.bulk), check.names = FALSE)
 
-# Plot with hex density
+# Plot
 p <- ggplot(df.cor, aes(x = `Salmon-Alevin`, y = `BenchDrop-seq`)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 
@@ -64,14 +62,12 @@ p + annotate("text",
 
 
 
-#### SUPPLEMENTARY FIG.1D (LR VS KALLISTO-BUSTOOLS CORRELATION) ####
+#### SUPP FIG.1D ####
 # Load LR data
 lr.k562 <- readRDS("LR.K562.S3.rds")
-
-# Access matrix
 lr.mat <- GetAssayData(lr.k562, assay = "RNA", layer = "data")
 
-# Load KB quantifications
+# Load Kallisto-Bustools quants
 kb.mat <- readMM("cells_x_genes.mtx")
 kb.mat <- t(kb.mat)
 kb.feats <- read.table("cells_x_genes.genes.names.txt")$V1
@@ -79,7 +75,7 @@ rownames(kb.mat) <- kb.feats
 kb.bcs <- read.table("cells_x_genes.barcodes.txt")$V1
 colnames(kb.mat) <- kb.bcs
 
-# Subset Kallisto-Bustools quantifications for the same cells as BenchDrop-seq
+# Subset Kallisto-Bustools quants for the same cells as BenchDrop-seq
 common.cols <- intersect(colnames(lr.mat), colnames(kb.mat))
 kb.mat <- kb.mat[, common.cols, drop = FALSE]
 
@@ -100,10 +96,10 @@ kb.bulk <- kb.bulk.full
 pearson.cor <- cor(lr.mat.bulk, kb.bulk, method = "pearson")
 spearman.cor <- cor(lr.mat.bulk, kb.bulk, method = "spearman")
 
-# Create DF for plotting
+# DF for plotting
 df.cor <- data.frame(`BenchDrop-seq` = log1p(lr.mat.bulk), `Kallisto-Bustools` = log1p(kb.bulk), check.names = FALSE)
 
-# Plot with hex density
+# Plot
 p <- ggplot(df.cor, aes(x = `Kallisto-Bustools`, y = `BenchDrop-seq`)) +
   geom_hex(bins = 100) +
   scale_fill_viridis_c(option = "plasma", trans = "log10") + 
