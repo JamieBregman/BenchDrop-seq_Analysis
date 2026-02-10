@@ -1,4 +1,4 @@
-# Supplementary Figure 5
+# Supplementary Figure 4
 
 # Load packages
 rm(list = ls())
