@@ -1,4 +1,4 @@
-# Supp Figure 2
+# Supp Figure 3
 
 # Load packages
 library(Seurat)
