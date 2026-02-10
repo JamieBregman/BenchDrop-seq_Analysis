@@ -1,7 +1,6 @@
 # Supplementary Figure 4
 
 # Load packages
-rm(list = ls())
 library(Seurat)
 library(Matrix)
 library(R.utils)
